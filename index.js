@@ -1,4 +1,4 @@
-const Bot = require('./Bot/index.js').InstagramBot;
+const Bot = require('./Bot/index.js');
 const config = require('./Bot/config/puppeter.json');
 
 const run = async () => {
@@ -12,7 +12,7 @@ const run = async () => {
 
     await bot.visitHashtagUrl().then(() => console.log("VISITED HASH-TAG URL"));
 
-    await bot.unFollowUsers();
+    await bot.LikePostsFromHashtag().then(() => console.log("HASH-TAG POSTS LIKED"));
 
     await bot.closeBrowser().then(() => console.log("BROWSER CLOSED"));
 

@@ -1,8 +1,8 @@
 class InstagramBot {
 
     constructor() {
-        this.firebase_db = require('./db');
-        this.config = require('./config/puppeteer.json');
+        //this.firebase_db = require('./db');
+        this.config = require('./config/puppeter.json');
     }
 
     async initPuppeter() {
@@ -18,8 +18,13 @@ class InstagramBot {
     async visitInstagram() {
         await this.page.goto(this.config.base_url, {timeout: 60000});
         await this.page.waitFor(2500);
+        
+        
         await this.page.click(this.config.selectors.home_to_login_button);
         await this.page.waitFor(2500);
+        
+        await this.page.click(this.config.selectors.accept_cookies);
+        
         /* Click on the username field using the field selector*/
         await this.page.click(this.config.selectors.username_field);
         await this.page.keyboard.type(this.config.username);
@@ -27,7 +32,14 @@ class InstagramBot {
         await this.page.keyboard.type(this.config.password);
         await this.page.click(this.config.selectors.login_button);
         await this.page.waitForNavigation();
+        
+        
+        //ignore save info
+        await this.page.waitForSelector(this.config.selectors.ignore_save_info)
+        await this.page.click(this.config.selectors.ignore_save_info);
+
         //Close Turn On Notification modal after login
+        await this.page.waitForSelector(this.config.selectors.not_now_button)
         await this.page.click(this.config.selectors.not_now_button);
     }
 
@@ -39,8 +51,45 @@ class InstagramBot {
             console.log('<<<< Currently Exploring >>>> #' + hashTags[tagIndex]);
             //visit the hash tag url
             await this.page.goto(`${this.config.base_url}/explore/tags/` + hashTags[tagIndex] + '/?hl=en');
-            // Loop through the latest 9 posts
-            await this._doPostLikeAndFollow(this.config.selectors.hash_tags_base_class, this.page)
+        }
+    }
+
+    async LikePostsFromHashtag(){
+        var parentClass = this.config.selectors.hash_tags_base_class;
+        for (let r = 1; r < 4; r++) {//loops through each row
+            for (let c = 1; c < 4; c++) {//loops through each item in the row
+    
+                let br = false;
+                //Try to select post
+                await this.page.click(`${parentClass} > div > div > .Nnq7C:nth-child(${r}) > .v1Nh3:nth-child(${c}) > a`)
+                    .catch((e) => {
+                        console.log(e.message);
+                        br = true;
+                    });
+                await this.page.waitFor(2250 + Math.floor(Math.random() * 250));//wait for random amount of time
+                if (br) continue;//if successfully selecting post continue
+    
+                //get the current post like status by checking if the selector exist
+                let hasEmptyHeart = await this.page.$(this.config.selectors.post_heart_grey);
+                
+                // //get the username of the current post
+                // let username = await this.page.evaluate(x => {
+                //     let element = document.querySelector(x);
+                //     return Promise.resolve(element ? element.innerHTML : '');
+                // }, this.config.selectors.post_username);
+                // console.log(`INTERACTING WITH ${username}'s POST`);
+    
+                //like the post if not already liked. Check against our like ratio so we don't just like all post
+                //if (hasEmptyHeart !== null && Math.random() < this.config.settings.like_ratio) {
+                    await this.page.click(this.config.selectors.post_like_button);//click the like button
+                //    await this.page.waitFor(10000 + Math.floor(Math.random() * 5000));// wait for random amount of time.
+                //}
+                
+                //await this.page.click("button[class=\"wpO6b \"]");
+                await this.page.waitFor(5000);
+                await this.page.keyboard.press('Escape');
+                
+            }
         }
     }
 
@@ -78,8 +127,8 @@ class InstagramBot {
     
                 //let's check from our archive if we've follow this user before
                 let isArchivedUser = null;
-                await this.firebase_db.inHistory(username).then(data => isArchivedUser = data)
-                    .catch(() => isArchivedUser = false);
+                // await this.firebase_db.inHistory(username).then(data => isArchivedUser = data)
+                //     .catch(() => isArchivedUser = false);
     
                 //get the current status of the current user using the text content of the follow button selector
                 let followStatus = await page.evaluate(x => {
@@ -92,15 +141,17 @@ class InstagramBot {
                 // Save his name in the list of user we now follow and follow him, else log that we already follow him
                 // or show any possible error
                 if (followStatus === 'Follow' && !isArchivedUser) {
-                    await this.firebase_db.addFollowing(username).then(() => {
-                        return page.click(this.config.selectors.post_follow_link);
-                    }).then(() => {
-                        console.log('<<< STARTED FOLLOWING >>> ' + username);
-                        return page.waitFor(10000 + Math.floor(Math.random() * 5000));
-                    }).catch((e) => {
-                        console.log('<<< ALREADY FOLLOWING >>> ' + username);
-                        console.log('<<< POSSIBLE ERROR >>>' + username + ':' + e.message);
-                    });
+                    // await this.firebase_db.addFollowing(username).then(() => {
+                    //try {page.click(this.config.selectors.post_follow_link);
+                    // }).then(() => {
+                    //     console.log('<<< STARTED FOLLOWING >>> ' + username);
+                    //     return page.waitFor(10000 + Math.floor(Math.random() * 5000));
+                    // }).catch((e) => {
+                    //}catch(e){
+                    //console.log('<<< ALREADY FOLLOWING >>> ' + username);
+                    //console.log('<<< POSSIBLE ERROR >>>' + username + ':' + e.message);
+                    //}
+                    // });
                 }
     
                 //Closing the current post modal
@@ -116,7 +167,7 @@ class InstagramBot {
         let date_range = new Date().getTime() - (this.config.settings.unfollow_after_days * 86400000);
     
         // get the list of users we are currently following
-        let following = await this.firebase_db.getFollowings();
+        let following = []
         let users_to_unfollow = [];
         if (following) {
             const all_users = Object.keys(following);
@@ -145,11 +196,8 @@ class InstagramBot {
                     await this.page.click(this.config.selectors.user_unfollow_confirm_button);
                     //wait for random amount of time
                     await this.page.waitFor(20000 + Math.floor(Math.random() * 5000));
-                    //save user to following history
-                    await this.firebase_db.unFollow(user);
                 } else {
                     //save user to our following history
-                    this.firebase_db.unFollow(user);
                 }
             }
     
@@ -161,4 +209,4 @@ class InstagramBot {
         }
 }
 
-module.exports = {InstagramBot};
+module.exports = InstagramBot;

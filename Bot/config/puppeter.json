@@ -1,16 +1,18 @@
 {
     "base_url": "https://www.instagram.com",
-    "username": "your-username",
-    "password": "your-password",
-    "hashTags": ["cars","cat","soccer","javascript","places","football", "Motivation"],
+    "username": "",
+    "password": "",
+    "hashTags": ["cars"],
     "settings": {
       "run_every_x_hours": 3,
-      "like_ratio": 0.75,
+      "like_ratio": 1.0,
       "unfollow_after_days": 2,
       "headless": false
     },
     "selectors": {
       "home_to_login_button": ".izU2O a",
+      "accept_cookies": "button[class=\"aOOlW  bIiDR  \"]",
+      "ignore_save_info": "button[class=\"sqdOP yWX7d    y3zKF     \"",
       "username_field": "input[type=\"text\"]",
       "password_field": "input[type=\"password\"]",
       "login_button": "button[type=\"submit\"]",
